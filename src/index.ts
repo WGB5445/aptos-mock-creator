@@ -1,40 +1,5 @@
 import { promises as fs } from 'fs';
-import { url } from 'inspector';
 import path from 'path';
-/*
-
-[
-  {
-    type: '0x1::object::ObjectCore',
-    data: {
-      allow_ungated_transfer: true,
-      guid_creation_num: '1125899906842625',
-      owner: '0x72dd3ce26390113abf284d9dd1fc33339a701ecc16c9afe09df344bfa24093d6',
-      transfer_events: [Object]
-    }
-  },
-  {
-    type: '0x1::object_code_deployment::ManagingRefs',
-    data: { extend_ref: [Object] }
-  },
-  { type: '0x1::code::PackageRegistry', data: { packages: [Array] } }
-  },
-  {
-    type: '0x1::object_code_deployment::ManagingRefs',
-    data: { extend_ref: [Object] }
-  },
-  },
-  {
-    type: '0x1::object_code_deployment::ManagingRefs',
-  },
-  {
-    type: '0x1::object_code_deployment::ManagingRefs',
-    data: { extend_ref: [Object] }
-  },
-  { type: '0x1::code::PackageRegistry', data: { packages: [Array] } }
-]
-
-*/
 
 interface AptosResource {
     type: string;
