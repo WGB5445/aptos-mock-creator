@@ -361,8 +361,8 @@ yargs(hideBin(process.argv))
         }
     })
     .demandCommand(1)
-    .example('$0 create 0x886d532004154847453321247ce11e9a044ebf2b6ca3f210c58ce2cfffbcff0c sui-swap ./output', 'Create a mock of the sui-swap package')
-    .example('$0 create 0x886d532004154847453321247ce11e9a044ebf2b6ca3f210c58ce2cfffbcff0c sui-swap --token YOUR_TOKEN', 'Create a mock with a Bearer token')
+    .example('$0 create 0x1 AptosStdlib ./output', 'Create a mock of the AptosStdlib package')
+    .example('$0 create 0x1 AptosStdlib --token YOUR_TOKEN', 'Create a mock with a Bearer token')
     .wrap(null)
     .help()
     .argv;
