@@ -1,6 +1,6 @@
 {
   "name": "aptos-mock-creator",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "A tool to create mock Aptos packages",
   "main": "dist/index.js",
   "type": "module",
