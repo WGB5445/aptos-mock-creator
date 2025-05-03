@@ -174,7 +174,7 @@ async function generateMoveToml(packageName: string, account: string, targetPack
         const depUniqueName = `${dep.package_name}_${dep.account.replace(/^0x/, '')}`;
         if (["0x1", "0x3", "0x4"].includes(dep.account)) {
             let subdir = "aptos-framework";
-            if (dep.package_name === "AptosStdlib") {
+            if (dep.package_name === "AptosStdlib") { 
                 subdir = "aptos-stdlib";
             } else if (dep.package_name === "AptosFramework") {
                 subdir = "aptos-framework";
@@ -248,27 +248,19 @@ async function downloadPackage(rpc: string, account: string, packageName: string
             throw new Error(`Package ${packageName} not found.`);
         }
 
-        // Check if the package is already downloaded delete the existing directory
-        const packagePath = path.join(outputDir, uniquePackageName);
-        if (existsSync(packagePath)) {
-            await fs.rm(packagePath, { recursive: true, force: true });
-            console.log(`已删除旧目录: ${packagePath}`);
-        }
-
         // Create directory for the package
-        const folderPath = path.join(outputDir, uniquePackageName);
-        await fs.mkdir(folderPath, { recursive: true });
-        console.log(`文件夹创建成功: ${folderPath}`);
+        await fs.mkdir(outputDir, { recursive: true });
+        console.log(`文件夹创建成功: ${outputDir}`);
 
         // Create sources directory
-        const sourcesPath = path.join(folderPath, "sources");
+        const sourcesPath = path.join(outputDir, "sources");
         await fs.mkdir(sourcesPath, { recursive: true });
         
         // Process modules
         await processModules(rpc, account, targetPackage.modules, sourcesPath);
 
         // Create Move.toml
-        const moveTomlPath = path.join(folderPath, "Move.toml");
+        const moveTomlPath = path.join(outputDir, "Move.toml");
         const moveTomlContent = await generateMoveToml(packageName, account, targetPackage, isRoot);
         await fs.writeFile(moveTomlPath, moveTomlContent, 'utf-8');
         console.log(`Move.toml 文件创建成功: ${moveTomlPath}`);
