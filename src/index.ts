@@ -1,5 +1,7 @@
-import { promises as fs } from 'fs';
+import { promises as fs, existsSync } from 'fs';
 import path from 'path';
+import yargs from 'yargs';
+import { hideBin } from 'yargs/helpers';
 
 interface AptosResource {
     type: string;
@@ -99,8 +101,20 @@ function aptosFunctionToMove(fn: AptosFunction): string {
     return `native ${entry}${visibility}fun ${fn.name}${generics}(${params})${returns} ;`;
 }
 
+// Function to get bearer token from environment or command line
+function getBearerToken(): string {
+    return process.env.APTOS_API_TOKEN || '';
+}
+
+// Function to create headers with Bearer token when available
+function createHeaders(): HeadersInit {
+    const token = getBearerToken();
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+
 async function get_module_abi(rpc: string, account: string, module: string): Promise<Response> {
-    const response = await fetch(`${rpc}/v1/accounts/${account}/module/${module}`);
+    const headers = createHeaders();
+    const response = await fetch(`${rpc}/v1/accounts/${account}/module/${module}`, { headers });
     if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -116,8 +130,9 @@ async function collectAllDependencies(
   depsMap: Map<string, {account: string, packageName: string}> = new Map()
 ): Promise<Map<string, {account: string, packageName: string}>> {
   try {
-    // Get account resources
-    const response = await fetch(`${rpc}/v1/accounts/${account}/resources`);
+    // Get account resources with Bearer token
+    const headers = createHeaders();
+    const response = await fetch(`${rpc}/v1/accounts/${account}/resources`, { headers });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -137,7 +152,7 @@ async function collectAllDependencies(
 
     // Process dependencies
     for (const dep of targetPackage.deps) {
-      if (dep.account !== "0x1") {
+      if (!["0x1","0x3","0x4"].includes(dep.account)) {
         const depKey = `${dep.account}::${dep.package_name}`;
         if (!depsMap.has(depKey)) {
           depsMap.set(depKey, {account: dep.account, packageName: dep.package_name});
@@ -153,39 +168,34 @@ async function collectAllDependencies(
   }
 }
 
-// Update the generateMoveToml function to handle flat dependency structure
 async function generateMoveToml(packageName: string, account: string, targetPackage: PackageInfo, isRoot: boolean = false): Promise<string> {
-    if (account === "0x1") {
-        return `[package]\nname = "${packageName}"\nversion = "1.0.0"\nauthors = []\n\n[dev-addresses]\n\n[dependencies]\n\n[dev-dependencies]`;
-    } else {
-        const deps = targetPackage.deps.map((dep) => {
-            if (["0x1","0x3","0x4"].includes(dep.account)) {
-                let subdir = "aptos-framework";
-                if (dep.package_name === "AptosStdlib") {
-                    subdir = "aptos-stdlib";
-                } else if (dep.package_name === "AptosFramework") {
-                    subdir = "aptos-framework";
-                } else if (dep.package_name === "AptosTokenObjects") {
-                    subdir = "aptos-token-objects";
-                } else if (dep.package_name === "AptosToken") {
-                    subdir = "aptos-token";
-                } else if (dep.package_name === "MoveStdlib") {
-                    subdir = "move-stdlib";
-                }
-                return `${dep.package_name} = { git = "https://github.com/aptos-labs/aptos-framework.git", rev = "mainnet", subdir = "${subdir}"}`;
-            } else {
-                // For the root package, reference deps in the deps directory
-                if (isRoot) {
-                    return `${dep.package_name} = { local = "deps/${dep.package_name}" }`;
-                } else {
-                    // For dependency packages, reference sibling deps
-                    return `${dep.package_name} = { local = "./${dep.package_name}" }`;
-                }
+    const uniquePackageName = `${packageName}_${account.replace(/^0x/, '')}`;
+    const deps = targetPackage.deps.map((dep) => {
+        const depUniqueName = `${dep.package_name}_${dep.account.replace(/^0x/, '')}`;
+        if (["0x1", "0x3", "0x4"].includes(dep.account)) {
+            let subdir = "aptos-framework";
+            if (dep.package_name === "AptosStdlib") {
+                subdir = "aptos-stdlib";
+            } else if (dep.package_name === "AptosFramework") {
+                subdir = "aptos-framework";
+            } else if (dep.package_name === "AptosTokenObjects") {
+                subdir = "aptos-token-objects";
+            } else if (dep.package_name === "AptosToken") {
+                subdir = "aptos-token";
+            } else if (dep.package_name === "MoveStdlib") {
+                subdir = "move-stdlib";
             }
-        }).join('\n');
+            return `${dep.package_name} = { git = "https://github.com/aptos-labs/aptos-framework.git", rev = "mainnet", subdir = "${subdir}"}`;
+        } else {
+            if (isRoot) {
+                return `${dep.package_name} = { local = "deps/${depUniqueName}" }`;
+            } else {
+                return `${dep.package_name} = { local = "../${depUniqueName}" }`;
+            }
+        }
+    }).join('\n');
 
-        return `[package]\nname = "${packageName}"\nversion = "1.0.0"\nauthors = []\n\n[dev-addresses]\n\n[dependencies]\n${deps}\n\n[dev-dependencies]`;
-    }
+    return `[package]\nname = "${packageName}"\nversion = "1.0.0"\nauthors = []\n\n[dev-addresses]\n\n[dependencies]\n${deps}\n\n[dev-dependencies]`;
 }
 
 async function processModules(rpc: string, account: string, modules: PackageModule[], outputDir: string): Promise<void> {
@@ -210,11 +220,13 @@ async function processModules(rpc: string, account: string, modules: PackageModu
 }
 
 async function downloadPackage(rpc: string, account: string, packageName: string, outputDir: string, isRoot: boolean = false): Promise<void> {
-    console.log(`Downloading package: ${packageName} from account: ${account}`);
+    const uniquePackageName = `${packageName}_${account.replace(/^0x/, '')}`;
+    console.log(`Downloading package: ${uniquePackageName} from account: ${account}`);
     
     try {
-        // Get account resources
-        const response = await fetch(`${rpc}/v1/accounts/${account}/resources`);
+        // Get account resources with Bearer token
+        const headers = createHeaders();
+        const response = await fetch(`${rpc}/v1/accounts/${account}/resources`, { headers });
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -236,19 +248,27 @@ async function downloadPackage(rpc: string, account: string, packageName: string
             throw new Error(`Package ${packageName} not found.`);
         }
 
+        // Check if the package is already downloaded delete the existing directory
+        const packagePath = path.join(outputDir, uniquePackageName);
+        if (existsSync(packagePath)) {
+            await fs.rm(packagePath, { recursive: true, force: true });
+            console.log(`已删除旧目录: ${packagePath}`);
+        }
+
         // Create directory for the package
-        await fs.mkdir(outputDir, { recursive: true });
-        console.log(`文件夹创建成功: ${outputDir}`);
+        const folderPath = path.join(outputDir, uniquePackageName);
+        await fs.mkdir(folderPath, { recursive: true });
+        console.log(`文件夹创建成功: ${folderPath}`);
 
         // Create sources directory
-        const sourcesPath = path.join(outputDir, "sources");
+        const sourcesPath = path.join(folderPath, "sources");
         await fs.mkdir(sourcesPath, { recursive: true });
         
         // Process modules
         await processModules(rpc, account, targetPackage.modules, sourcesPath);
 
         // Create Move.toml
-        const moveTomlPath = path.join(outputDir, "Move.toml");
+        const moveTomlPath = path.join(folderPath, "Move.toml");
         const moveTomlContent = await generateMoveToml(packageName, account, targetPackage, isRoot);
         await fs.writeFile(moveTomlPath, moveTomlContent, 'utf-8');
         console.log(`Move.toml 文件创建成功: ${moveTomlPath}`);
@@ -260,23 +280,22 @@ async function downloadPackage(rpc: string, account: string, packageName: string
     }
 }
 
-async function processUrlAndCreatePackage(rpc: string, account: string, packageName: string, targetDir?: string) {
+// Export the main function for CLI usage
+export async function createMockPackage(rpc: string, account: string, packageName: string, targetDir?: string) {
     try {
         const baseDir = targetDir || process.cwd();
         const folderPath = path.join(baseDir, packageName);
         
-        console.log(`目标目录: ${folderPath}`);
-
-        // Check if folder exists and remove it if it does
-        try {
-            await fs.access(folderPath);
-            console.log(`文件夹已存在: ${folderPath}`);
-            await fs.rm(folderPath, { recursive: true, force: true });
-            console.log(`文件夹已删除: ${folderPath}`);
-        } catch (err) {
-            // Folder doesn't exist, do nothing
-        }
+        console.log(`Using RPC: ${rpc}`);
+        console.log(`Using account: ${account}`);
+        console.log(`Target package: ${packageName}`);
+        console.log(`Output directory: ${folderPath}`);
         
+        const token = getBearerToken();
+        if (token) {
+            console.log('Using Bearer token for authentication');
+        }
+
         // First collect all dependencies
         const depsMap = await collectAllDependencies(rpc, account, packageName);
         console.log(`Collected ${depsMap.size} unique dependencies`);
@@ -290,18 +309,68 @@ async function processUrlAndCreatePackage(rpc: string, account: string, packageN
         
         // Download all dependencies flat into the deps directory
         for (const [_, dep] of depsMap.entries()) {
-            const depDir = path.join(depsDir, dep.packageName);
+            const depDir = path.join(depsDir, `${dep.packageName}_${dep.account.replace(/^0x/, '')}`);
             await downloadPackage(rpc, dep.account, dep.packageName, depDir, false);
         }
         
-        console.log('所有操作完成！');
+        console.log('All operations completed successfully!');
     } catch (error) {
-        console.error('处理过程中发生错误:', error instanceof Error ? error.message : error);
+        console.error('Error during processing:', error instanceof Error ? error.message : error);
+        throw error;
     }
 }
 
-// 使用示例
-const jsonUrl = 'https://api.mainnet.aptoslabs.com'; // 替换为你的 JSON URL
-const targetDirectory = './test'; // 可选的目标目录，不指定则使用当前目录
-
-processUrlAndCreatePackage(jsonUrl, "0x886d532004154847453321247ce11e9a044ebf2b6ca3f210c58ce2cfffbcff0c", "sui-swap", targetDirectory).catch(console.error);
+// Setup CLI
+yargs(hideBin(process.argv))
+    .command('create <account> <package> [directory]', 'Create a mock Aptos package', (yargs) => {
+        return yargs
+            .positional('account', {
+                describe: 'Account address',
+                type: 'string',
+                demandOption: true
+            })
+            .positional('package', {
+                describe: 'Package name',
+                type: 'string',
+                demandOption: true
+            })
+            .positional('directory', {
+                describe: 'Target directory',
+                type: 'string',
+                default: './output'
+            })
+            .option('rpc', {
+                alias: 'r',
+                describe: 'RPC URL',
+                type: 'string',
+                default: 'https://api.mainnet.aptoslabs.com'
+            })
+            .option('token', {
+                alias: 't',
+                describe: 'Bearer token for API authentication',
+                type: 'string'
+            });
+    }, async (argv) => {
+        try {
+            // Set token from CLI if provided
+            if (argv.token) {
+                process.env.APTOS_API_TOKEN = argv.token;
+            }
+            
+            await createMockPackage(
+                argv.rpc as string, 
+                argv.account as string,
+                argv.package as string,
+                argv.directory as string
+            );
+        } catch (error) {
+            console.error('Command failed:', error);
+            process.exit(1);
+        }
+    })
+    .demandCommand(1)
+    .example('$0 create 0x886d532004154847453321247ce11e9a044ebf2b6ca3f210c58ce2cfffbcff0c sui-swap ./output', 'Create a mock of the sui-swap package')
+    .example('$0 create 0x886d532004154847453321247ce11e9a044ebf2b6ca3f210c58ce2cfffbcff0c sui-swap --token YOUR_TOKEN', 'Create a mock with a Bearer token')
+    .wrap(null)
+    .help()
+    .argv;
