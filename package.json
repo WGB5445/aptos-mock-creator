@@ -7,15 +7,24 @@
   "bin": {
     "aptos-mock": "dist/index.js"
   },
+  "files": [
+    "dist",
+    "package.json",
+    "README.md"
+  ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "prestart": "tsc --project tsconfig.json ",
     "start": "node dist/index.js",
     "build": "tsc"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": ["aptos", "mock", "creator", "blockchain", "tool"],
+  "author": "wgb98512@gmail.com",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wgb5445/aptos-mock-creator.git"
+  },
   "packageManager": "pnpm@10.9.0",
   "dependencies": {
     "yargs": "^17.7.2"

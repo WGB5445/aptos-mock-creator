@@ -329,7 +329,7 @@ yargs(hideBin(process.argv))
             .positional('directory', {
                 describe: 'Target directory',
                 type: 'string',
-                default: './output'
+                default: './'
             })
             .option('rpc', {
                 alias: 'r',
