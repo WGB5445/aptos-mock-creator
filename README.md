@@ -23,7 +23,7 @@ yarn global add aptos-mock-creator
 ## 🛠️ Usage 使用方法
 
 ```bash
-aptos-mock create <account> <package> [directory] [options]
+aptos-mock-creator create <account> <package> [directory] [options]
 ```
 
 - `<account>`: Aptos account address (Aptos 账户地址)
@@ -33,13 +33,13 @@ aptos-mock create <account> <package> [directory] [options]
 ### 🌟 Example 示例
 
 ```bash
-aptos-mock create 0x1 AptosStdlib ./output
+aptos-mock-creator create 0x1 AptosStdlib ./output
 ```
 
 你也可以添加 Bearer Token（如有 API 权限需求）：
 
 ```bash
-aptos-mock create 0x1 AptosStdlib --token YOUR_TOKEN
+aptos-mock-creator create 0x1 AptosStdlib --token YOUR_TOKEN
 ```
 
 ---
@@ -60,7 +60,7 @@ aptos-mock create 0x1 AptosStdlib --token YOUR_TOKEN
 - You can check all options with:  
   你可以通过以下命令查看所有参数：
   ```bash
-  aptos-mock --help
+  aptos-mock-creator --help
   ```
 
 ---
