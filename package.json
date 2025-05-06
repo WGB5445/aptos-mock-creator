@@ -7,6 +7,7 @@
   "bin": {
     "aptos-mock": "dist/index.js"
   },
+  "preferGlobal": true,
   "files": [
     "dist",
     "package.json",
