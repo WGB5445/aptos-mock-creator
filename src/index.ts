@@ -65,7 +65,7 @@ interface AptosFunction {
     visibility: string;
     is_entry: boolean;
     is_view: boolean;
-    generic_type_params: [{ constraints: [] }][];
+    generic_type_params: { constraints: string[] }[];
     params: string[];
     return: string[];
 }
@@ -75,7 +75,7 @@ interface AptosStruct {
     is_native: boolean;
     is_event: boolean;
     abilities: string[];
-    generic_type_params: any[];
+    generic_type_params: { constraints: string[] }[];
     fields: {
         name: string;
         type: string;
@@ -83,8 +83,15 @@ interface AptosStruct {
 }
 
 function aptosStructToMove(struct: AptosStruct): string {
+    const generics = struct.generic_type_params.length > 0
+        ? `<${struct.generic_type_params.map((param, i) => {
+            if (param && Array.isArray(param.constraints) && param.constraints.length > 0) {
+                return `T${i}: ${param.constraints.join(' + ')}`;
+            }
+            return `T${i}`;
+        }).join(', ')}>`
+        : '';
     const abilities = struct.abilities.length > 0 ? ` has ${struct.abilities.join(', ')}` : '';
-    const generics = struct.generic_type_params.length > 0 ? `<${struct.generic_type_params.map((_, i) => `T${i}`).join(', ')}>` : '';
     const fields = struct.fields
         .filter(f => f.name !== 'dummy_field')
         .map(f => `    ${f.name}: ${f.type},`)
@@ -96,7 +103,12 @@ function aptosFunctionToMove(fn: AptosFunction): string {
     const entry = fn.is_entry ? 'entry ' : '';
     const visibility = fn.visibility === 'public' ? 'public ' : '';
     const generics = fn.generic_type_params.length > 0
-        ? `<${fn.generic_type_params.map((_, i) => `T${i}`).join(', ')}>`
+        ? `<${fn.generic_type_params.map((param, i) => {
+            if (param && Array.isArray(param.constraints) && param.constraints.length > 0) {
+                return `T${i}: ${param.constraints.join(' + ')}`;
+            }
+            return `T${i}`;
+        }).join(', ')}>`
         : '';
     const params = fn.params.map((p, i) => `arg${i}: ${p}`).join(', ');
     const returns = fn.return.length > 0 ? `: (${fn.return.join(', ')})` : '';
