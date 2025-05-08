@@ -86,7 +86,7 @@ function aptosStructToMove(struct: AptosStruct): string {
     const generics = struct.generic_type_params.length > 0
         ? `<${struct.generic_type_params.map((param, i) => {
             if (param && Array.isArray(param.constraints) && param.constraints.length > 0) {
-                return `phantom T${i}: ${param.constraints.join(' + ')}`;
+                return `T${i}: ${param.constraints.join(' + ')}`;
             }
             return `T${i}`;
         }).join(', ')}>`
