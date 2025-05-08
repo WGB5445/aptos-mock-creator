@@ -1,6 +1,6 @@
 {
   "name": "aptos-mock-creator",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "A tool to create mock Aptos packages",
   "main": "dist/index.js",
   "type": "module",
@@ -19,7 +19,13 @@
     "start": "node dist/index.js",
     "build": "tsc"
   },
-  "keywords": ["aptos", "mock", "creator", "blockchain", "tool"],
+  "keywords": [
+    "aptos",
+    "mock",
+    "creator",
+    "blockchain",
+    "tool"
+  ],
   "author": "wgb98512@gmail.com",
   "license": "MIT",
   "repository": {
