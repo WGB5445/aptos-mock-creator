@@ -112,7 +112,7 @@ function aptosFunctionToMove(fn: AptosFunction): string {
         : '';
     const params = fn.params.map((p, i) => `arg${i}: ${p}`).join(', ');
     const returns = fn.return.length > 0 ? `: (${fn.return.join(', ')})` : '';
-    return `native ${entry}${visibility}fun ${fn.name}${generics}(${params})${returns} ;`;
+    return `${entry}${visibility}fun ${fn.name}${generics}(${params})${returns} { abort }`;
 }
 
 // Function to get bearer token from environment or command line
