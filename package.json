@@ -1,6 +1,6 @@
 {
   "name": "aptos-mock-creator",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "A tool to create mock Aptos packages",
   "main": "dist/index.js",
   "type": "module",
@@ -34,11 +34,11 @@
   },
   "packageManager": "pnpm@10.9.0",
   "dependencies": {
-    "yargs": "^17.7.2"
+    "yargs": "^18.0.0"
   },
   "devDependencies": {
-    "@types/node": "^22.15.3",
-    "@types/yargs": "^17.0.24",
-    "typescript": "^5.0.0"
+    "@types/node": "^22.19.3",
+    "@types/yargs": "^18.0.0",
+    "typescript": "^5.9.3"
   }
 }
